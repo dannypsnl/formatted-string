@@ -52,18 +52,18 @@
 
   (define (embed-computation-into-string src origin-stx str)
     (define idx (string-index str "$"))
-    (if idx
-        (let* ([exp (read-syntax src (open-input-string (substring str (add1 idx))))]
-               [end-idx (+ idx (string-length (format "~a" (syntax->datum exp))))]
-               [after-stx (embed-computation-into-string src origin-stx (substring str (add1 end-idx)))])
-          (with-syntax ([fmt (string-append (substring str 0 idx) "~a")]
-                        [e exp]
-                        [a-stx after-stx])
-            (syntax/loc
-                (syntax-srcloc origin-stx)
-              (format (string-append fmt a-stx) e))))
-        (with-syntax ([stx str])
-          (syntax/loc (syntax-srcloc origin-stx) stx))))
+    (cond
+      [idx (let* ([exp (read-syntax src (open-input-string (substring str (add1 idx))))]
+                  [end-idx (+ idx (string-length (format "~a" (syntax->datum exp))))]
+                  [after-stx (embed-computation-into-string src origin-stx (substring str (add1 end-idx)))])
+             (with-syntax ([fmt (string-append (substring str 0 idx) "~a")]
+                           [e exp]
+                           [a-stx after-stx])
+               (syntax/loc
+                   (syntax-srcloc origin-stx)
+                 (format (string-append fmt a-stx) e))))]
+      [else (with-syntax ([stx str])
+              (syntax/loc (syntax-srcloc origin-stx) stx))]))
 
   (define (string-index hay needle)
     (define n (string-length needle))
