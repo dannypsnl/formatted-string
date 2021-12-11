@@ -1,5 +1,7 @@
 string-extension
 ================
+[![Racket Test](https://github.com/dannypsnl/formatted-string/actions/workflows/racket-test.yml/badge.svg)](https://github.com/dannypsnl/formatted-string/actions/workflows/racket-test.yml)
+
 The language extends racket string to formatted string, let's look at the following example.
 
 ```racket
