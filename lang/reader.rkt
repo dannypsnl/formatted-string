@@ -34,7 +34,7 @@
   (require syntax/strip-context
            syntax/parse
            racket/syntax-srcloc)
-  (define (literal-read-syntax src in s a b c)
+  (define (literal-read-syntax src in . rest)
     (define ss
       (let loop ([r '()])
         (define stx (read-syntax src in))
