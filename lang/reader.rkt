@@ -32,37 +32,38 @@
      (lambda (proc) proc)))
 
   (require syntax/strip-context
+           syntax/parse
            racket/syntax-srcloc)
   (define (literal-read-syntax src in s a b c)
     (define ss
       (let loop ([r '()])
         (define stx (read-syntax src in))
-        (if (eof-object? stx)
-            r
-            (loop (append r (list stx))))))
-    (with-syntax ([(s ...) (map (lambda (stx)
-                                  ; walk on stx
-                                  (if (string? (syntax->datum stx))
-                                      (embed-computation-into-string src stx (syntax->datum stx))
-                                      stx))
-                                ss)])
+        (if (eof-object? stx) r (loop (append r (list stx))))))
+    (define (walk stx)
+      (syntax-parse stx
+        [(x ...) (map walk (syntax->list stx))]
+        [x (if (string? (syntax->datum stx))
+               (embed-computation-into-string src stx (syntax->datum stx))
+               stx)]))
+    (with-syntax ([(s ...) (map walk ss)])
       (strip-context
        #'(module anything racket/base
            s ...))))
 
-  (define (embed-computation-into-string src origin-stx S)
-    (define idx (string-index S "$"))
+  (define (embed-computation-into-string src origin-stx str)
+    (define idx (string-index str "$"))
     (if idx
-        (let* ([exp (read-syntax src (open-input-string (substring S (add1 idx))))]
+        (let* ([exp (read-syntax src (open-input-string (substring str (add1 idx))))]
                [end-idx (+ idx (string-length (format "~a" (syntax->datum exp))))]
-               [after-stx (embed-computation-into-string src origin-stx (substring S (add1 end-idx)))])
-          (with-syntax ([fmt (string-append (substring S 0 idx) "~a")]
+               [after-stx (embed-computation-into-string src origin-stx (substring str (add1 end-idx)))])
+          (with-syntax ([fmt (string-append (substring str 0 idx) "~a")]
                         [e exp]
                         [a-stx after-stx])
             (syntax/loc
                 (syntax-srcloc origin-stx)
               (format (string-append fmt a-stx) e))))
-        (syntax/loc (syntax-srcloc origin-stx) "")))
+        (with-syntax ([stx str])
+          (syntax/loc (syntax-srcloc origin-stx) stx))))
 
   (define (string-index hay needle)
     (define n (string-length needle))
