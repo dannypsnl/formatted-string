@@ -2,7 +2,7 @@
 @require[@for-label[racket/base]]
 
 @title{formatted-string}
-@author{linzizhuan}
+@author{林子篆}
 
 @defmodulelang[formatted-string]{
 The @racketmodname[formatted-string] language is a lang-extension extends racket string to formatted string.

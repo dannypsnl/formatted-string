@@ -5,5 +5,5 @@
 (define scribblings '(("scribblings/formatted-string.scrbl" ())))
 (define pkg-desc "Extends racket string to formatted string")
 (define version "0.0")
-(define pkg-authors '(linzizhuan))
+(define pkg-authors '(林子篆))
 (define license '(Apache-2.0 OR MIT))
