@@ -14,4 +14,6 @@ For example, @racket[@#,hash-lang[] @#,racketmodname[formatted-string] @#,racket
 "x = $x, y = $y, z = $z, (+ x y z) = $(+ x y z)"
 ]
 produces @racket["x = 1, y = 2, z = 3, (+ x y z) = 6"]
+
+However, sometimes we would like to write @racket["$"] in string, in this case, you write @racket["$$"] to escape from formatted string!
 }

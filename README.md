@@ -10,3 +10,5 @@ The language extends racket string to formatted string, let's look at the follow
 (define-values (x y z) (values 1 2 3))
 "x = $x, y = $y, z = $z, (+ x y z) = $(+ x y z)"
 ```
+
+To escape from this, write `"$$"` to get `"$"`!
