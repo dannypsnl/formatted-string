@@ -43,7 +43,7 @@
       (syntax-parse stx
         [(x ...) (map walk (syntax->list stx))]
         [x (if (string? (syntax->datum stx))
-               (embed-computation-into-string src stx (syntax->datum stx))
+               (embed-computation-into-string src (syntax-srcloc stx) (syntax->datum stx))
                stx)]))
     (with-syntax ([(s ...) (map walk ss)])
       (strip-context
@@ -53,17 +53,24 @@
   (define (embed-computation-into-string src origin-stx str)
     (define idx (string-index str "$"))
     (cond
+      [(and idx (< idx (sub1 (string-length str))) (char=? #\$ (string-ref str (add1 idx))))
+       (with-syntax ([stx (string-append (substring str 0 (add1 idx))
+                                         "$")]
+                     [end (embed-computation-into-string src origin-stx (substring str (add1 idx)))])
+         (syntax/loc origin-stx
+           (string-append stx end)))]
       [idx (define exp (read-syntax src (open-input-string (substring str (add1 idx)))))
-           (define end-idx (+ idx (string-length (format "~a" (syntax->datum exp)))))
-           (define after-stx (embed-computation-into-string src origin-stx (substring str (add1 end-idx))))
-           (with-syntax ([fmt (string-append (substring str 0 idx) "~a")]
-                         [e exp]
-                         [a-stx after-stx])
-             (syntax/loc
-                 (syntax-srcloc origin-stx)
-               (format (string-append fmt a-stx) e)))]
+           (if (eof-object? exp)
+               (syntax/loc origin-stx "")
+               (let* ([end-idx (+ idx (string-length (format "~a" (syntax->datum exp))))])
+                 (with-syntax ([fmt (string-append (substring str 0 idx) "~a")]
+                               [e exp]
+                               [a-stx (embed-computation-into-string src origin-stx
+                                                                     (substring str (add1 end-idx)))])
+                   (syntax/loc origin-stx
+                     (format (string-append fmt a-stx) e)))))]
       [else (with-syntax ([stx str])
-              (syntax/loc (syntax-srcloc origin-stx) stx))]))
+              (syntax/loc origin-stx stx))]))
 
   (define (string-index hay needle)
     (define n (string-length needle))
