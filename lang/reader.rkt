@@ -40,10 +40,11 @@
         (if (eof-object? stx)
             r
             (loop (append r (list stx))))))
-    (with-syntax ([(s ...) (map (lambda (s)
-                                  (if (string? (syntax->datum s))
-                                      (embed-computation-into-string src s (syntax->datum s))
-                                      s))
+    (with-syntax ([(s ...) (map (lambda (stx)
+                                  ; walk on stx
+                                  (if (string? (syntax->datum stx))
+                                      (embed-computation-into-string src stx (syntax->datum stx))
+                                      stx))
                                 ss)])
       (strip-context
        #'(module anything racket/base
