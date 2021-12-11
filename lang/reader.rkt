@@ -33,7 +33,7 @@
 
   (require syntax/strip-context
            racket/syntax-srcloc)
-   (define (literal-read-syntax src in s a b c)
+  (define (literal-read-syntax src in s a b c)
     (define ss
       (let loop ([r '()])
         (define stx (read-syntax src in))
@@ -42,21 +42,19 @@
             (loop (append r (list stx))))))
     (with-syntax ([(s ...) (map (lambda (s)
                                   (if (string? (syntax->datum s))
-                                      (let ()
-                                        (define S (syntax->datum s))
-                                        (convert src s S))
+                                      (embed-computation-into-string src s (syntax->datum s))
                                       s))
                                 ss)])
       (strip-context
        #'(module anything racket/base
            s ...))))
 
-  (define (convert src origin-stx S)
+  (define (embed-computation-into-string src origin-stx S)
     (define idx (string-index S "$"))
     (if idx
         (let* ([exp (read-syntax src (open-input-string (substring S (add1 idx))))]
                [end-idx (+ idx (string-length (format "~a" (syntax->datum exp))))]
-               [after-stx (convert src origin-stx (substring S (add1 end-idx)))])
+               [after-stx (embed-computation-into-string src origin-stx (substring S (add1 end-idx)))])
           (with-syntax ([fmt (string-append (substring S 0 idx) "~a")]
                         [e exp]
                         [a-stx after-stx])
