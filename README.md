@@ -1,4 +1,4 @@
-string-extension
+formatted-string
 ================
 [![Racket Test](https://github.com/dannypsnl/formatted-string/actions/workflows/racket-test.yml/badge.svg)](https://github.com/dannypsnl/formatted-string/actions/workflows/racket-test.yml)
 
