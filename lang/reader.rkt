@@ -22,6 +22,8 @@
             [(eof-object? c) l]
             [(char=? c #\") (read-char in) l]
             [(char=? c #\$) (read-char in)
+                            (when (char=? (peek-char in) #\")
+                              (error 'read-syntax "$ must not at the end of string"))
                             (set! args (append args (list (read-syntax src in))))
                             (loop (append l (list #\~ #\a)))]
             [(char=? c #\\) (cond
