@@ -6,15 +6,8 @@
       (define stx (rd in))
       (define old-prop (syntax-property stx 'module-language))
       (define new-prop `#(formatted-string/lang/language-info get-language-info ,old-prop))
-      (syntax-case (syntax-property stx 'module-language new-prop) ()
-        [(module name lang (#%module-begin . body))
-         (let ((make-unhygienic (make-syntax-delta-introducer #'require #'module)))
-           (wrap
-            #`(module name lang
-                (#%module-begin
-                 . body))))])))
+      (syntax-property stx 'module-language new-prop)))
 
-  (define wrap (make-syntax-introducer #t))
   (define (action c in src line col pos)
     (define (conv src in)
       (define args '())
