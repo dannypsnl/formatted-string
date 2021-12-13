@@ -11,4 +11,4 @@ The language extends racket string to formatted string, let's look at the follow
 "x = $x, y = $y, z = $z, (+ x y z) = $(+ x y z)"
 ```
 
-To escape from this, write `"$$"` to get `"$"`!
+To escape from this, write `"\$"` to get `"$"`!
