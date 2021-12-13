@@ -8,6 +8,10 @@
       (define new-prop `#(formatted-string/lang/language-info get-language-info ,old-prop))
       (syntax-property stx 'module-language new-prop)))
 
+  (define table #hash((#\n . #\newline)
+                      (#\b . #\backspace)
+                      (#\t . #\tab)
+                      (#\r . #\return)))
   (define (action c in src line col pos)
     (define (conv src in)
       (define args '())
@@ -20,11 +24,14 @@
             [(char=? c #\$) (read-char in)
                             (set! args (append args (list (read-syntax src in))))
                             (loop (append l (list #\~ #\a)))]
-            [(char=? c #\\) (read-char in)
-                            (cond
-                              [(char=? (peek-char in) #\$)
+            [(char=? c #\\) (cond
+                              [(char=? (peek-char in 1) #\$)
+                               (read-char in)
                                (loop (append l (list (read-char in))))]
-                              [else (loop (append l (list #\\ c)))])]
+                              [else (read-char in)
+                                    (define escape-c (read-char in))
+                                    (define c (hash-ref table escape-c escape-c))
+                                    (loop (append l (list c)))])]
             [else (read-char in)
                   (loop (append l (list c)))])))
       (if (= (length args) 0)
