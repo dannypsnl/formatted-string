@@ -36,8 +36,9 @@
                   (loop (append l (list c)))])))
       (if (= (length args) 0)
           (list->string s)
-          (with-syntax ([fmt (list->string s)]
-                        [(arg ...) args])
-            (syntax/loc (srcloc src line col pos #f)
-              (#,(wrap #'format) fmt arg ...)))))
+          (syntax->datum
+           (with-syntax ([fmt (list->string s)]
+                         [(arg ...) args])
+             (syntax/loc (srcloc src line col pos #f)
+               (format fmt arg ...))))))
     (conv src in)))
