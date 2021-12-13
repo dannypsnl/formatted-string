@@ -1,81 +1,43 @@
-(module reader racket/base
-  (require syntax/module-reader)
+(module reader syntax/module-reader
+  #:language read
+  #:wrapper2
+  (λ (in rd stx?)
+    (parameterize ([current-readtable (make-readtable #f #\" 'terminating-macro action)])
+      (define stx (rd in))
+      (define old-prop (syntax-property stx 'module-language))
+      (define new-prop `#(formatted-string/lang/language-info get-language-info ,old-prop))
+      (syntax-case (syntax-property stx 'module-language new-prop) ()
+        [(module name lang (#%module-begin . body))
+         (let ((make-unhygienic (make-syntax-delta-introducer #'require #'module)))
+           (wrap
+            #`(module name lang
+                (#%module-begin
+                 . body))))])))
 
-  (provide (rename-out [formatted-string-read read]
-                       [formatted-string-read-syntax read-syntax]
-                       [formatted-string-get-info get-info]))
-
-  (define-values (formatted-string-read formatted-string-read-syntax formatted-string-get-info)
-    (make-meta-reader
-     'formatted-string
-     "language path"
-     (lambda (bstr)
-       (let* ([str (bytes->string/latin-1 bstr)]
-              [sym (string->symbol str)])
-         (and (module-path? sym)
-              (vector
-               ;; try submod first:
-               `(submod ,sym reader)
-               ;; fall back to /lang/reader:
-               (string->symbol (string-append str "/lang/reader"))))))
-     (lambda (orig-read)
-       (define (read . args)
-         (apply orig-read args))
-       read)
-     (lambda (orig-read-syntax)
-       (define (read-syntax . args)
-         (define stx (apply literal-read-syntax args))
-         (define old-prop (syntax-property stx 'module-language))
-         (define new-prop `#(formatted-string/lang/language-info get-language-info ,old-prop))
-         (syntax-property stx 'module-language new-prop))
-       read-syntax)
-     (lambda (proc) proc)))
-
-  (require syntax/strip-context
-           syntax/parse
-           racket/syntax-srcloc)
-  (define (literal-read-syntax src in . rest)
-    (define ss
-      (let loop ([r '()])
-        (define stx (read-syntax src in))
-        (if (eof-object? stx) r (loop (append r (list stx))))))
-    (define (walk stx)
-      (syntax-parse stx
-        [(x ...) (map walk (syntax->list stx))]
-        [x (if (string? (syntax->datum stx))
-               ((embed-computation-into-string src (syntax-srcloc stx))
-                (syntax->datum stx))
-               stx)]))
-    (with-syntax ([(s ...) (map walk ss)])
-      (strip-context
-       #'(module anything racket/base
-           s ...))))
-
-  (define (embed-computation-into-string src origin-srcloc)
-    (define (convert str)
-      (define idx (string-index str "$"))
-      (cond
-        [(and idx (< idx (sub1 (string-length str)))
-              (char=? #\$ (string-ref str (add1 idx))))
-         (with-syntax ([front (substring str 0 (add1 idx))]
-                       [end (convert (substring str (add1 idx)))])
-           (syntax/loc origin-srcloc
-             (string-append front "$" end)))]
-        [idx (define exp (read-syntax src (open-input-string (substring str (add1 idx)))))
-             (if (eof-object? exp)
-                 (syntax/loc origin-srcloc "")
-                 (with-syntax ([front (substring str 0 idx)]
-                               [e exp]
-                               [end (convert (substring str (+ 1 idx (string-length (format "~a" (syntax->datum exp))))))])
-                   (syntax/loc origin-srcloc
-                     (format (string-append front "~a" end) e))))]
-        [else (with-syntax ([s str]) (syntax/loc origin-srcloc s))]))
-    convert)
-
-  (define (string-index hay needle)
-    (define n (string-length needle))
-    (define h (string-length hay))
-    (and (<= n h) ; if the needle is longer than hay, then the needle can not be found
-         (for/or ([i (- h n -1)]
-                  #:when (string=? (substring hay i (+ i n)) needle))
-           i))))
+  (define wrap (make-syntax-introducer #t))
+  (define (action c in src line col pos)
+    (define (conv src in)
+      (define args '())
+      (define s
+        (let loop ([l '()])
+          (define c (peek-char in))
+          (cond
+            [(eof-object? c) l]
+            [(char=? c #\") (read-char in) l]
+            [(char=? c #\$) (read-char in)
+                            (set! args (append args (list (read-syntax src in))))
+                            (loop (append l (list #\~ #\a)))]
+            [(char=? c #\\) (read-char in)
+                            (cond
+                              [(char=? (peek-char in) #\$)
+                               (loop (append l (list (read-char in))))]
+                              [else (loop (append l (list #\\ c)))])]
+            [else (read-char in)
+                  (loop (append l (list c)))])))
+      (if (= (length args) 0)
+          (list->string s)
+          (with-syntax ([fmt (list->string s)]
+                        [(arg ...) args])
+            (syntax/loc (srcloc src line col pos #f)
+              (#,(wrap #'format) fmt arg ...)))))
+    (conv src in)))
